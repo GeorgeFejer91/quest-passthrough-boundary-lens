@@ -1,27 +1,42 @@
-# Rusty XR
+# Quest Passthrough Boundary Lens
 
-Rusty XR is a public Rust workspace for reusable XR contracts, utility modules,
-and workflow helpers used by Rust-native XR applications.
+Quest Passthrough Boundary Lens is a native Meta Quest research prototype for
+mapping the app-visible Camera2/OES feed onto native OpenXR passthrough as a
+transparent boundary/seam lens. The practical goal is not perfect one-to-one
+passthrough reprojection. The project instead focuses on a usable perceptual
+approximation: keep native passthrough visible outside the app camera footprint,
+soften the seam, and tune the boundary so the overlay reads as a continuous
+lens effect.
 
-The project is intended to provide a clean shared foundation for app shells and
-experiments that need common XR data models, runtime configuration helpers,
-device diagnostics, passthrough-camera abstractions, depth and SDF contracts,
-plain stereo/feedback layer descriptors and tuning hints, native
-passthrough-layer style descriptors, safety-gated visual strobe descriptors,
-effect-stack diagnostic descriptors, LSL utilities, and general particle or
-animation primitives.
-The research-streaming surface now also includes source-only broker stream and
-engine-neutral eye-data contracts before native provider adapters.
+This repository is derived from Rusty-XR and keeps its MIT license intact. The
+original Rusty-XR workspace remains the shared foundation; this fork extends
+the native Quest OpenXR video-stack example with passthrough-underlay profiles,
+Camera2 UV calibration, homography seam rendering, mesh-warp diagnostics, and
+app-owned visual verification dumps. See [ATTRIBUTION.md](ATTRIBUTION.md) for
+the upstream attribution note.
 
-Rusty XR is not a Quest application, not an APK distribution repo, and not a
-replacement for an app-specific shell. Application repositories remain
-responsible for package identity, platform integration, rendering policy,
-assets, product behavior, signing, release payloads, and validation on target
-hardware.
-Rusty Kiosk developer-home and kiosk-like launcher concepts are modeled as data
-contracts only: panels, launcher entries, settings shortcuts, helper state, and
-bounded focus-recovery events. They do not make Rusty XR a system UI replacement
-or an MDM/device-owner kiosk implementation.
+Current progress:
+
+- Native Quest APK path using Rust, Android, OpenXR, OpenGL ES, Camera2, and
+  SurfaceTexture/OES.
+- Runtime profiles for boundary tint, alignment edges, camera homography
+  edges/seam, seam blend, mesh-warp edges/seam, and spatial warp.
+- Shared and per-eye Camera2 UV calibration controls for offset, scale, and
+  radial terms.
+- Transparent passthrough-underlay behavior outside the source-valid footprint.
+- Per-eye framebuffer dumps and camera-profile validation updates for visual
+  inspection.
+
+Remaining next steps:
+
+- Capture a better-lit scene with richer interior edges so scoring is not
+  dominated by the diagnostic footprint ring.
+- Tune the seam route for perceptual edge continuity rather than full
+  passthrough pixel registration.
+- Keep the homography seam route as the default unless near-object edge
+  failures require depth-aware or world-space reprojection.
+- Consider a dedicated boundary-continuity layer that treats the patch edge as
+  an intentional visual design element.
 
 ## Workspace
 
