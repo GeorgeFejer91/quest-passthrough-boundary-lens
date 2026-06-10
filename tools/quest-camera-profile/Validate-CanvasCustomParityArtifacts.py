@@ -281,7 +281,7 @@ def validate_case_record(record: Any, path: str) -> None:
     require_string(value["headsetCapture"], f"{path}.headsetCapture")
     require_enum(value["headsetCaptureProvider"], f"{path}.headsetCaptureProvider", {"fast-adb", "hzdb"})
     require_enum(value["brokerH264SourceMode"], f"{path}.brokerH264SourceMode", {"direct-camera", "broker-camera", "broker-synthetic"})
-    require_enum(value["processingLayer"], f"{path}.processingLayer", {"raw", "blur", "peripheral-stretch"})
+    require_enum(value["processingLayer"], f"{path}.processingLayer", {"raw", "blur", "peripheral-stretch", "boundary-tint", "seam-blend", "mesh-warp-edges", "mesh-warp-seam", "uv-fiducials", "dense-uv-fiducials", "spatial-warp", "alignment-edges"})
     require_number(value["blurRadiusPx"], f"{path}.blurRadiusPx")
 
 
@@ -330,7 +330,7 @@ def validate_suite_summary(value: Any) -> dict[str, Any]:
 
     geometry = require_object(summary["geometry"], "summary.geometry")
     border_policy = require_enum(geometry.get("projectionBorderPolicy"), "summary.geometry.projectionBorderPolicy", {"passthrough-underlay", "solid-red"})
-    require_enum(geometry.get("processingLayer"), "summary.geometry.processingLayer", {"raw", "blur", "peripheral-stretch"})
+    require_enum(geometry.get("processingLayer"), "summary.geometry.processingLayer", {"raw", "blur", "peripheral-stretch", "boundary-tint", "seam-blend", "mesh-warp-edges", "mesh-warp-seam", "uv-fiducials", "dense-uv-fiducials", "spatial-warp", "alignment-edges"})
     require_enum(geometry.get("peripheralStretchMode"), "summary.geometry.peripheralStretchMode", {"edge-stretch"})
     require_enum(geometry.get("peripheralStretchBlendMode"), "summary.geometry.peripheralStretchBlendMode", {"off", "target-inner-band"})
     require_enum(geometry.get("peripheralStretchCornerMode"), "summary.geometry.peripheralStretchCornerMode", {"target-footprint"})

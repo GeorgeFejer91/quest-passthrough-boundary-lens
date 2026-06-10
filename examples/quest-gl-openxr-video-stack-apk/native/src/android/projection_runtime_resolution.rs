@@ -18,6 +18,7 @@ pub(super) fn oes_projection_runtime_state_from_resolution(
         oes_projection_area_offset_from_resolution(fallback.projection_area_offset_uv, resolution);
     OesProjectionRuntimeState {
         tuning: oes_projection_tuning_from_resolution(fallback.tuning, resolution),
+        camera_uv_calibration: fallback.camera_uv_calibration,
         projection_area_offset_uv,
         projection_area_eye_offset_uv: oes_projection_area_eye_offset_from_resolution(
             fallback.projection_area_eye_offset_uv,

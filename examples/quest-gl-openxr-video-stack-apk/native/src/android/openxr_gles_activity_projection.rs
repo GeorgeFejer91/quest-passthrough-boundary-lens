@@ -2,9 +2,9 @@ use super::{
     openxr_gles_activity_env::{activity_float_extra, with_activity_env},
     openxr_gles_config::{
         activity_string_extra, android_system_property_f32, OesCameraProjectionMode,
-        OesProjectionAlphaMode, OesProjectionBorderPolicy, OesProjectionTuning,
-        DEFAULT_PROJECTION_TARGET_DEPTH_METERS, PROJECTION_PREVIEW_FOV_Y_DEGREES,
-        PROJECTION_RAW_OVERSCAN,
+        OesCameraUvCalibration, OesProjectionAlphaMode, OesProjectionBorderPolicy,
+        OesProjectionTuning, DEFAULT_PROJECTION_TARGET_DEPTH_METERS,
+        PROJECTION_PREVIEW_FOV_Y_DEGREES, PROJECTION_RAW_OVERSCAN,
     },
 };
 
@@ -83,6 +83,143 @@ pub(super) fn camera_projection_mode_from_activity(
             .as_deref()
             .and_then(OesCameraProjectionMode::parse)
             .unwrap_or_default()
+    })
+}
+
+pub(super) fn camera_uv_calibration_from_activity(
+    app: &android_activity::AndroidApp,
+) -> OesCameraUvCalibration {
+    let defaults = OesCameraUvCalibration::default();
+    with_activity_env(app, defaults, |env, activity| {
+        let offset_uv = [
+            activity_float_extra(env, activity, &["rustyxr.cameraUvOffsetX"])
+                .unwrap_or(defaults.offset_uv[0]),
+            activity_float_extra(env, activity, &["rustyxr.cameraUvOffsetY"])
+                .unwrap_or(defaults.offset_uv[1]),
+        ];
+        let scale = [
+            activity_float_extra(env, activity, &["rustyxr.cameraUvScaleX"])
+                .unwrap_or(defaults.scale[0]),
+            activity_float_extra(env, activity, &["rustyxr.cameraUvScaleY"])
+                .unwrap_or(defaults.scale[1]),
+        ];
+        let radial = [
+            activity_float_extra(env, activity, &["rustyxr.cameraUvRadialK1"])
+                .unwrap_or(defaults.radial[0]),
+            activity_float_extra(env, activity, &["rustyxr.cameraUvRadialK2"])
+                .unwrap_or(defaults.radial[1]),
+        ];
+        let left_offset_uv = [
+            activity_float_extra(
+                env,
+                activity,
+                &["rustyxr.cameraUvLeftOffsetX", "rustyxr.cameraUvEye0OffsetX"],
+            )
+            .unwrap_or(offset_uv[0]),
+            activity_float_extra(
+                env,
+                activity,
+                &["rustyxr.cameraUvLeftOffsetY", "rustyxr.cameraUvEye0OffsetY"],
+            )
+            .unwrap_or(offset_uv[1]),
+        ];
+        let right_offset_uv = [
+            activity_float_extra(
+                env,
+                activity,
+                &[
+                    "rustyxr.cameraUvRightOffsetX",
+                    "rustyxr.cameraUvEye1OffsetX",
+                ],
+            )
+            .unwrap_or(offset_uv[0]),
+            activity_float_extra(
+                env,
+                activity,
+                &[
+                    "rustyxr.cameraUvRightOffsetY",
+                    "rustyxr.cameraUvEye1OffsetY",
+                ],
+            )
+            .unwrap_or(offset_uv[1]),
+        ];
+        let left_scale = [
+            activity_float_extra(
+                env,
+                activity,
+                &["rustyxr.cameraUvLeftScaleX", "rustyxr.cameraUvEye0ScaleX"],
+            )
+            .unwrap_or(scale[0]),
+            activity_float_extra(
+                env,
+                activity,
+                &["rustyxr.cameraUvLeftScaleY", "rustyxr.cameraUvEye0ScaleY"],
+            )
+            .unwrap_or(scale[1]),
+        ];
+        let right_scale = [
+            activity_float_extra(
+                env,
+                activity,
+                &["rustyxr.cameraUvRightScaleX", "rustyxr.cameraUvEye1ScaleX"],
+            )
+            .unwrap_or(scale[0]),
+            activity_float_extra(
+                env,
+                activity,
+                &["rustyxr.cameraUvRightScaleY", "rustyxr.cameraUvEye1ScaleY"],
+            )
+            .unwrap_or(scale[1]),
+        ];
+        let left_radial = [
+            activity_float_extra(
+                env,
+                activity,
+                &[
+                    "rustyxr.cameraUvLeftRadialK1",
+                    "rustyxr.cameraUvEye0RadialK1",
+                ],
+            )
+            .unwrap_or(radial[0]),
+            activity_float_extra(
+                env,
+                activity,
+                &[
+                    "rustyxr.cameraUvLeftRadialK2",
+                    "rustyxr.cameraUvEye0RadialK2",
+                ],
+            )
+            .unwrap_or(radial[1]),
+        ];
+        let right_radial = [
+            activity_float_extra(
+                env,
+                activity,
+                &[
+                    "rustyxr.cameraUvRightRadialK1",
+                    "rustyxr.cameraUvEye1RadialK1",
+                ],
+            )
+            .unwrap_or(radial[0]),
+            activity_float_extra(
+                env,
+                activity,
+                &[
+                    "rustyxr.cameraUvRightRadialK2",
+                    "rustyxr.cameraUvEye1RadialK2",
+                ],
+            )
+            .unwrap_or(radial[1]),
+        ];
+        OesCameraUvCalibration {
+            offset_uv,
+            scale,
+            radial,
+            eye_offset_uv: [left_offset_uv, right_offset_uv],
+            eye_scale: [left_scale, right_scale],
+            eye_radial: [left_radial, right_radial],
+        }
+        .sanitized()
     })
 }
 

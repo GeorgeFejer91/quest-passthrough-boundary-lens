@@ -1,6 +1,6 @@
 use super::openxr_gles_config::{
-    OesColorControls, OesPeripheralStretchConfig, OesProcessingLayer, OesProjectionAlphaMode,
-    OesProjectionBorderPolicy, OesProjectionRuntimeState,
+    OesCameraUvCalibration, OesColorControls, OesPeripheralStretchConfig, OesProcessingLayer,
+    OesProjectionAlphaMode, OesProjectionBorderPolicy, OesProjectionRuntimeState,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -19,6 +19,7 @@ pub(super) struct OesRenderTuning {
     pub(super) projection_alpha_mode: OesProjectionAlphaMode,
     pub(super) projection_alpha_scale: f32,
     pub(super) projection_alpha_bias: f32,
+    pub(super) camera_uv_calibration: OesCameraUvCalibration,
     pub(super) camera_color_controls: OesColorControls,
 }
 
@@ -43,6 +44,7 @@ impl OesRenderTuning {
             projection_alpha_mode: projection_state.projection_alpha_mode,
             projection_alpha_scale: projection_state.projection_alpha_scale,
             projection_alpha_bias: projection_state.projection_alpha_bias,
+            camera_uv_calibration: projection_state.camera_uv_calibration,
             camera_color_controls,
         }
     }

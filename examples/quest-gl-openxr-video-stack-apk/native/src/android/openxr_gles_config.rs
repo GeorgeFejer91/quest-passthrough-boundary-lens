@@ -34,6 +34,7 @@ pub(super) struct OesProjectionTuning {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct OesProjectionRuntimeState {
     pub(super) tuning: OesProjectionTuning,
+    pub(super) camera_uv_calibration: OesCameraUvCalibration,
     pub(super) projection_area_offset_uv: [f32; 2],
     pub(super) projection_area_eye_offset_uv: [[f32; 2]; 2],
     pub(super) projection_area_scale: [f32; 2],
@@ -49,6 +50,94 @@ pub(super) struct OesProjectionRuntimeState {
     pub(super) processing_layer: OesProcessingLayer,
     pub(super) blur_radius_px: f32,
     pub(super) peripheral_stretch: OesPeripheralStretchConfig,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct OesCameraUvCalibration {
+    pub(super) offset_uv: [f32; 2],
+    pub(super) scale: [f32; 2],
+    pub(super) radial: [f32; 2],
+    pub(super) eye_offset_uv: [[f32; 2]; 2],
+    pub(super) eye_scale: [[f32; 2]; 2],
+    pub(super) eye_radial: [[f32; 2]; 2],
+}
+
+impl Default for OesCameraUvCalibration {
+    fn default() -> Self {
+        let offset_uv = [0.0, 0.0];
+        let scale = [1.0, 1.0];
+        let radial = [0.0, 0.0];
+        Self {
+            offset_uv,
+            scale,
+            radial,
+            eye_offset_uv: [offset_uv, offset_uv],
+            eye_scale: [scale, scale],
+            eye_radial: [radial, radial],
+        }
+    }
+}
+
+impl OesCameraUvCalibration {
+    pub(super) fn sanitized(self) -> Self {
+        Self {
+            offset_uv: [
+                self.offset_uv[0].clamp(-0.5, 0.5),
+                self.offset_uv[1].clamp(-0.5, 0.5),
+            ],
+            scale: [
+                self.scale[0].clamp(0.25, 4.0),
+                self.scale[1].clamp(0.25, 4.0),
+            ],
+            radial: [
+                self.radial[0].clamp(-4.0, 4.0),
+                self.radial[1].clamp(-8.0, 8.0),
+            ],
+            eye_offset_uv: [
+                [
+                    self.eye_offset_uv[0][0].clamp(-0.5, 0.5),
+                    self.eye_offset_uv[0][1].clamp(-0.5, 0.5),
+                ],
+                [
+                    self.eye_offset_uv[1][0].clamp(-0.5, 0.5),
+                    self.eye_offset_uv[1][1].clamp(-0.5, 0.5),
+                ],
+            ],
+            eye_scale: [
+                [
+                    self.eye_scale[0][0].clamp(0.25, 4.0),
+                    self.eye_scale[0][1].clamp(0.25, 4.0),
+                ],
+                [
+                    self.eye_scale[1][0].clamp(0.25, 4.0),
+                    self.eye_scale[1][1].clamp(0.25, 4.0),
+                ],
+            ],
+            eye_radial: [
+                [
+                    self.eye_radial[0][0].clamp(-4.0, 4.0),
+                    self.eye_radial[0][1].clamp(-8.0, 8.0),
+                ],
+                [
+                    self.eye_radial[1][0].clamp(-4.0, 4.0),
+                    self.eye_radial[1][1].clamp(-8.0, 8.0),
+                ],
+            ],
+        }
+    }
+
+    pub(super) fn for_eye(self, eye_index: usize) -> Self {
+        let sanitized = self.sanitized();
+        let eye_index = eye_index.min(1);
+        Self {
+            offset_uv: sanitized.eye_offset_uv[eye_index],
+            scale: sanitized.eye_scale[eye_index],
+            radial: sanitized.eye_radial[eye_index],
+            eye_offset_uv: sanitized.eye_offset_uv,
+            eye_scale: sanitized.eye_scale,
+            eye_radial: sanitized.eye_radial,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]

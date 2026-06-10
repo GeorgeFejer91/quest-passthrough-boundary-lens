@@ -29,6 +29,7 @@ pub(super) struct OesRenderFrameInputs<'a> {
 pub(super) struct OesRenderResources {
     fbo: GlFramebuffer,
     oes_copy_renderer: Option<OesCopyRenderer>,
+    visual_dump_written: [bool; 2],
 }
 
 impl OesRenderResources {
@@ -51,6 +52,7 @@ impl OesRenderResources {
         Self {
             fbo: GlFramebuffer::new(),
             oes_copy_renderer,
+            visual_dump_written: [false; 2],
         }
     }
 
@@ -84,6 +86,7 @@ impl OesRenderResources {
             projection_alpha_mode,
             projection_alpha_scale,
             projection_alpha_bias,
+            camera_uv_calibration,
             camera_color_controls,
         } = tuning;
 
@@ -141,6 +144,7 @@ impl OesRenderResources {
                     projection_alpha_mode,
                     projection_alpha_scale,
                     projection_alpha_bias,
+                    camera_uv_calibration,
                     camera_color_controls,
                 ) {
                     Ok(fbo_status) => {
@@ -210,6 +214,34 @@ impl OesRenderResources {
                     render_path,
                     rendered_source_sequence
                 ));
+            }
+            if render_path == OES_PROJECTED_RENDER_PATH
+                && frame_count >= 2
+                && eye.view_index < self.visual_dump_written.len()
+                && !self.visual_dump_written[eye.view_index]
+            {
+                let path = format!(
+                    "/data/user/0/com.example.rustyxr.opengles/files/boundary-lens-eye{}-frame{}.ppm",
+                    eye.view_index, frame_count
+                );
+                match self
+                    .fbo
+                    .capture_texture_ppm(texture, eye.width, eye.height, &path)
+                {
+                    Ok(()) => {
+                        self.visual_dump_written[eye.view_index] = true;
+                        log_info(format!(
+                            "Rusty XR OpenXR GLES visual framebuffer dump eye={} frame={} path={}",
+                            eye.view_index, frame_count, path
+                        ));
+                    }
+                    Err(error) => {
+                        log_error(format!(
+                            "Rusty XR OpenXR GLES visual framebuffer dump failed eye={} frame={}: {error}",
+                            eye.view_index, frame_count
+                        ));
+                    }
+                }
             }
             eye.handle.release_image().map_err(|error| {
                 format!(

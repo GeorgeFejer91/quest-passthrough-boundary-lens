@@ -239,8 +239,8 @@ fn oes_peripheral_stretch_log_fields(projection_state: OesProjectionRuntimeState
 #[cfg(test)]
 mod tests {
     use super::super::openxr_gles_config::{
-        OesCameraProjectionMode, OesPeripheralStretchConfig, OesProcessingLayer,
-        OesProjectionAlphaMode, OesProjectionBorderPolicy,
+        OesCameraProjectionMode, OesCameraUvCalibration, OesPeripheralStretchConfig,
+        OesProcessingLayer, OesProjectionAlphaMode, OesProjectionBorderPolicy,
     };
     use super::*;
 
@@ -280,6 +280,7 @@ mod tests {
                 projection_area_scale: [0.95, 0.85],
                 projection_area_radius: [0.47, 0.36],
                 projection_area_corner_radius_uv: 0.08,
+                camera_uv_calibration: OesCameraUvCalibration::default(),
                 projection_area_opacity: 0.75,
                 projection_border_opacity: 0.5,
                 projection_alpha_mode: OesProjectionAlphaMode::Green,

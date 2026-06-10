@@ -4,8 +4,9 @@ use super::{
     glUniform1f, glUniform1i, glUniform2f, glUniform3f, glUniform4f, glUniformMatrix4fv,
     gles_shader_program::uniform_location,
     openxr_gles_config::{
-        OesColorControls, OesContentMappingMode, OesPeripheralStretchConfig, OesProcessingLayer,
-        OesProjectionAlphaMode, OesProjectionBorderPolicy,
+        OesCameraUvCalibration, OesColorControls, OesContentMappingMode,
+        OesPeripheralStretchConfig, OesProcessingLayer, OesProjectionAlphaMode,
+        OesProjectionBorderPolicy,
     },
 };
 
@@ -34,6 +35,8 @@ pub(super) struct OesCopyUniformLocations {
     target_footprint_from_metadata_location: c_int,
     projection_alpha_mode_location: c_int,
     projection_alpha_transform_location: c_int,
+    camera_uv_calibration_location: c_int,
+    camera_uv_radial_location: c_int,
     source_texel_size_location: c_int,
     color_matrix_r0_location: c_int,
     color_matrix_r1_location: c_int,
@@ -106,6 +109,8 @@ impl OesCopyUniformLocations {
                 program,
                 "u_projection_alpha_transform",
             )?,
+            camera_uv_calibration_location: uniform_location(program, "u_camera_uv_calibration")?,
+            camera_uv_radial_location: uniform_location(program, "u_camera_uv_radial")?,
             source_texel_size_location: uniform_location(program, "u_source_texel_size")?,
             color_matrix_r0_location: uniform_location(program, "u_color_matrix_r0")?,
             color_matrix_r1_location: uniform_location(program, "u_color_matrix_r1")?,
@@ -215,6 +220,22 @@ impl OesCopyUniformLocations {
                 uniforms.projection_alpha_scale.clamp(0.0, 4.0),
                 uniforms.projection_alpha_bias.clamp(-1.0, 1.0),
             );
+            let camera_uv_calibration = uniforms
+                .camera_uv_calibration
+                .for_eye(uniforms.eye_index)
+                .sanitized();
+            glUniform4f(
+                self.camera_uv_calibration_location,
+                camera_uv_calibration.offset_uv[0],
+                camera_uv_calibration.offset_uv[1],
+                camera_uv_calibration.scale[0],
+                camera_uv_calibration.scale[1],
+            );
+            glUniform2f(
+                self.camera_uv_radial_location,
+                camera_uv_calibration.radial[0],
+                camera_uv_calibration.radial[1],
+            );
             glUniform2f(
                 self.source_texel_size_location,
                 uniforms.source_texel_size[0],
@@ -295,6 +316,7 @@ pub(super) struct OesCopyRenderUniforms {
     pub(super) projection_alpha_mode: OesProjectionAlphaMode,
     pub(super) projection_alpha_scale: f32,
     pub(super) projection_alpha_bias: f32,
+    pub(super) camera_uv_calibration: OesCameraUvCalibration,
     pub(super) source_texel_size: [f32; 2],
     pub(super) color_controls: OesColorControls,
 }

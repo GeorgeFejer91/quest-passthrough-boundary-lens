@@ -10,6 +10,7 @@ impl OesActivityConfig {
         let extras = read_oes_activity_extras(app);
         let projection_state = OesProjectionRuntimeState {
             tuning: extras.base_projection_tuning,
+            camera_uv_calibration: extras.camera_uv_calibration,
             projection_area_offset_uv: extras.projection_area_offset_uv,
             projection_area_eye_offset_uv: extras.projection_area_eye_offset_uv,
             projection_area_scale: extras.projection_area_scale,

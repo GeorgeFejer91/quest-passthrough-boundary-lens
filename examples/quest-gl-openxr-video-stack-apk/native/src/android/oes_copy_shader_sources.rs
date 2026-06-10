@@ -34,6 +34,8 @@ uniform float u_projection_border_opacity;
 uniform int u_target_footprint_from_metadata;
 uniform int u_projection_alpha_mode;
 uniform vec2 u_projection_alpha_transform;
+uniform vec4 u_camera_uv_calibration;
+uniform vec2 u_camera_uv_radial;
 uniform vec2 u_source_texel_size;
 uniform vec3 u_color_matrix_r0;
 uniform vec3 u_color_matrix_r1;
@@ -171,7 +173,105 @@ bool peripheral_stretch_enabled() {
 // Keep the mode/corner uniforms live for the public runtime contract, but let
 // the processing layer own effect activation like the HWB shader path.
 return u_processing_layer == 2 ||
+    u_processing_layer == 6 ||
     (u_peripheral_stretch_mode + u_peripheral_stretch_corner_mode) == -4096;
+}
+vec2 calibrated_camera_uv(vec2 uv) {
+vec2 center = vec2(0.5);
+vec2 offset_uv = clamp(u_camera_uv_calibration.xy, vec2(-0.5), vec2(0.5));
+vec2 scale = clamp(u_camera_uv_calibration.zw, vec2(0.25), vec2(4.0));
+vec2 radial = clamp(u_camera_uv_radial, vec2(-4.0, -8.0), vec2(4.0, 8.0));
+vec2 delta = uv - center;
+float r2 = dot(delta, delta);
+float radial_scale = 1.0 + radial.x * r2 + radial.y * r2 * r2;
+return center + delta * scale * radial_scale + offset_uv;
+}
+bool selected_mesh_warp_enabled() {
+return u_processing_layer == 7 || u_processing_layer == 8;
+}
+int selected_mesh_control_count() {
+return u_eye_index == 0 ? 10 : 7;
+}
+vec4 selected_mesh_control(int index) {
+if (u_eye_index == 0) {
+    if (index == 0) { return vec4(0.795866, 0.373647, -0.013156, 0.008298); }
+    if (index == 1) { return vec4(0.550475, 0.431970, 0.013135, 0.002463); }
+    if (index == 2) { return vec4(0.857299, 0.315608, -0.012260, -0.001637); }
+    if (index == 3) { return vec4(0.795636, 0.489534, -0.013143, 0.001676); }
+}
+if (u_eye_index != 0) {
+    if (index == 0) { return vec4(0.234737, 0.723138, 0.001747, -0.002480); }
+}
+int anchor_base = u_eye_index == 0 ? 4 : 1;
+int anchor_index = index - anchor_base;
+if (anchor_index == 0) { return vec4(0.0, 0.0, 0.0, 0.0); }
+if (anchor_index == 1) { return vec4(1.0, 0.0, 0.0, 0.0); }
+if (anchor_index == 2) { return vec4(0.0, 1.0, 0.0, 0.0); }
+if (anchor_index == 3) { return vec4(1.0, 1.0, 0.0, 0.0); }
+if (anchor_index == 4) { return vec4(0.5, 0.0, 0.0, 0.0); }
+return vec4(0.5, 1.0, 0.0, 0.0);
+}
+vec2 selected_mesh_displacement_uv(vec2 screen_uv) {
+vec2 weighted_sum = vec2(0.0);
+float weight_sum = 0.0;
+int count = selected_mesh_control_count();
+for (int index = 0; index < 13; ++index) {
+    if (index < count) {
+        vec4 control = selected_mesh_control(index);
+        vec2 delta = screen_uv - control.xy;
+        float weight = 1.0 / max(dot(delta, delta), 0.00018);
+        weighted_sum += control.zw * weight;
+        weight_sum += weight;
+    }
+}
+return clamp(weighted_sum / max(weight_sum, 0.0001), vec2(-0.055), vec2(0.055));
+}
+int selected_mesh_residual_control_count() {
+return u_eye_index == 0 ? 12 : 15;
+}
+vec4 selected_mesh_residual_control(int index) {
+if (u_eye_index == 0) {
+    if (index == 0) { return vec4(0.798444, 0.374622, -0.013041, -0.012180); }
+    if (index == 1) { return vec4(0.292795, 0.373348, -0.016470, 0.005591); }
+    if (index == 2) { return vec4(0.547329, 0.491041, 0.000846, 0.011597); }
+    if (index == 3) { return vec4(0.118649, 0.217117, -0.017780, -0.015875); }
+    if (index == 4) { return vec4(0.667247, 0.321816, -0.008597, 0.015223); }
+    if (index == 5) { return vec4(0.285261, 0.307942, -0.015886, 0.005334); }
+}
+if (u_eye_index != 0) {
+    if (index == 0) { return vec4(0.839369, 0.212618, 0.016884, -0.011850); }
+    if (index == 1) { return vec4(0.831199, 0.263474, 0.006430, -0.010489); }
+    if (index == 2) { return vec4(0.481721, 0.328393, -0.010439, -0.002456); }
+    if (index == 3) { return vec4(0.423276, 0.382708, -0.010579, 0.011806); }
+    if (index == 4) { return vec4(0.300199, 0.379682, 0.012096, 0.009280); }
+    if (index == 5) { return vec4(0.481928, 0.385095, -0.012451, 0.000445); }
+    if (index == 6) { return vec4(0.480971, 0.492366, -0.007527, -0.007231); }
+    if (index == 7) { return vec4(0.481721, 0.328393, -0.009967, -0.004782); }
+    if (index == 8) { return vec4(0.364988, 0.437129, 0.012729, 0.001742); }
+}
+int anchor_base = u_eye_index == 0 ? 6 : 9;
+int anchor_index = index - anchor_base;
+if (anchor_index == 0) { return vec4(0.0, 0.0, 0.0, 0.0); }
+if (anchor_index == 1) { return vec4(1.0, 0.0, 0.0, 0.0); }
+if (anchor_index == 2) { return vec4(0.0, 1.0, 0.0, 0.0); }
+if (anchor_index == 3) { return vec4(1.0, 1.0, 0.0, 0.0); }
+if (anchor_index == 4) { return vec4(0.5, 0.0, 0.0, 0.0); }
+return vec4(0.5, 1.0, 0.0, 0.0);
+}
+vec2 selected_mesh_residual_displacement_uv(vec2 screen_uv) {
+vec2 weighted_sum = vec2(0.0);
+float weight_sum = 0.0;
+int count = selected_mesh_residual_control_count();
+for (int index = 0; index < 15; ++index) {
+    if (index < count) {
+        vec4 control = selected_mesh_residual_control(index);
+        vec2 delta = screen_uv - control.xy;
+        float weight = 1.0 / max(dot(delta, delta), 0.00018);
+        weighted_sum += control.zw * weight;
+        weight_sum += weight;
+    }
+}
+return clamp(weighted_sum / max(weight_sum, 0.0001), vec2(-0.035), vec2(0.035));
 }
 float srgb_channel_to_linear(float value) {
 float c = clamp(value, 0.0, 1.0);
@@ -274,6 +374,182 @@ for (int y = -2; y <= 2; ++y) {
 vec3 rgb = sum / 25.0;
 return premultiplied_alpha_color(rgb, projection_color_alpha(rgb));
 }
+vec4 boundary_tint_sample(vec2 uv, float signed_distance_uv) {
+vec3 source_rgb = adjusted_camera_rgb(uv);
+float source_edge_distance = min(
+    min(uv.x, uv.y),
+    min(1.0 - uv.x, 1.0 - uv.y)
+);
+float projection_inner_distance = max(-signed_distance_uv, 0.0);
+float edge_distance = min(source_edge_distance, projection_inner_distance);
+float feather = smoothstep(0.0, 0.025, edge_distance);
+float ring = 1.0 - smoothstep(0.003, 0.015, edge_distance);
+float base_alpha = projection_color_alpha(source_rgb) * feather;
+float ring_alpha = ring * clamp(max(u_projection_area_opacity, 0.18), 0.0, 0.38);
+float alpha = max(base_alpha, ring_alpha);
+vec3 tint_rgb = vec3(0.12, 0.42, 1.0);
+vec3 lens_rgb = mix(source_rgb, tint_rgb, 0.22);
+vec3 edge_rgb = vec3(0.25, 0.70, 1.0);
+lens_rgb = mix(lens_rgb, edge_rgb, ring * 0.55);
+return premultiplied_alpha_color(lens_rgb, alpha);
+}
+vec4 seam_blend_sample(vec2 uv, float signed_distance_uv) {
+vec3 source_rgb = adjusted_camera_rgb(uv);
+float source_edge_distance = min(
+    min(uv.x, uv.y),
+    min(1.0 - uv.x, 1.0 - uv.y)
+);
+float projection_inner_distance = max(-signed_distance_uv, 0.0);
+float projection_outer_distance = max(signed_distance_uv, 0.0);
+float inner_width = clamp(max(u_peripheral_stretch_blend_params.x, 0.075), 0.006, 0.24);
+float outer_width = clamp(max(u_peripheral_stretch_params.z, 0.070), 0.006, 0.28);
+float inner_edge_distance = min(source_edge_distance, projection_inner_distance);
+float inner_feather = smoothstep(0.0, inner_width, inner_edge_distance);
+float outer_feather = 1.0 - smoothstep(0.0, outer_width, projection_outer_distance);
+float base_alpha = projection_color_alpha(source_rgb);
+float inner_dissolve = pow(clamp(inner_feather, 0.0, 1.0), 1.45);
+float outer_dissolve = pow(clamp(outer_feather, 0.0, 1.0), 1.65);
+float alpha = signed_distance_uv <= 0.0
+    ? base_alpha * inner_dissolve
+    : base_alpha * outer_dissolve * 0.18;
+float seam_t = signed_distance_uv <= 0.0
+    ? 1.0 - inner_dissolve
+    : outer_dissolve;
+vec3 tint_rgb = vec3(0.12, 0.34, 0.80);
+float tint_strength = mix(0.004, 0.030, clamp(seam_t, 0.0, 1.0));
+vec3 lens_rgb = mix(source_rgb, tint_rgb, tint_strength);
+return premultiplied_alpha_color(lens_rgb, alpha);
+}
+vec4 spatial_warp_sample(vec2 uv, float signed_distance_uv) {
+vec2 center = vec2(0.5);
+vec2 delta = uv - center;
+float radius = length(delta);
+float safe_radius = max(radius, 0.00001);
+float edge_ease = smoothstep(0.0, 0.85, radius);
+float sample_radius = radius * (1.0 - 0.38 * pow(max(1.0 - edge_ease, 0.0), 2.0));
+vec2 warped_uv = center + delta * (sample_radius / safe_radius);
+warped_uv = clamp(warped_uv, vec2(0.0), vec2(1.0));
+vec3 source_rgb = adjusted_camera_rgb(warped_uv);
+float source_edge_distance = min(
+    min(uv.x, uv.y),
+    min(1.0 - uv.x, 1.0 - uv.y)
+);
+float projection_inner_distance = max(-signed_distance_uv, 0.0);
+float edge_distance = min(source_edge_distance, projection_inner_distance);
+float feather = smoothstep(0.0, 0.025, edge_distance);
+float boundary_ring = 1.0 - smoothstep(0.004, 0.020, edge_distance);
+float radial_ring = smoothstep(0.965, 1.0, abs(sin(radius * 44.0)));
+float displacement = clamp(length(warped_uv - uv) * 8.0, 0.0, 1.0);
+float alpha = max(
+    projection_color_alpha(source_rgb) * feather,
+    boundary_ring * clamp(max(u_projection_area_opacity, 0.22), 0.0, 0.46)
+);
+vec3 warp_tint_rgb = vec3(0.04, 0.22, 1.0);
+vec3 flow_rgb = vec3(0.10, 0.95, 1.0);
+vec3 lens_rgb = mix(source_rgb, warp_tint_rgb, 0.20);
+lens_rgb = mix(lens_rgb, flow_rgb, clamp(radial_ring * 0.16 + displacement * 0.10, 0.0, 0.38));
+lens_rgb = mix(lens_rgb, vec3(0.25, 0.75, 1.0), boundary_ring * 0.62);
+return premultiplied_alpha_color(lens_rgb, alpha);
+}
+vec4 alignment_edges_sample(vec2 uv, float signed_distance_uv) {
+vec2 texel = max(u_source_texel_size, vec2(0.0005)) * 2.0;
+vec3 center_rgb = adjusted_camera_rgb(uv);
+float center_luma = dot(center_rgb, vec3(0.2126, 0.7152, 0.0722));
+float luma_left = dot(adjusted_camera_rgb(uv - vec2(texel.x, 0.0)), vec3(0.2126, 0.7152, 0.0722));
+float luma_right = dot(adjusted_camera_rgb(uv + vec2(texel.x, 0.0)), vec3(0.2126, 0.7152, 0.0722));
+float luma_down = dot(adjusted_camera_rgb(uv - vec2(0.0, texel.y)), vec3(0.2126, 0.7152, 0.0722));
+float luma_up = dot(adjusted_camera_rgb(uv + vec2(0.0, texel.y)), vec3(0.2126, 0.7152, 0.0722));
+float gx = luma_right - luma_left;
+float gy = luma_up - luma_down;
+float gradient_edge = smoothstep(0.018, 0.105, length(vec2(gx, gy)));
+float local_average = (luma_left + luma_right + luma_down + luma_up) * 0.25;
+float fine_edge = smoothstep(0.012, 0.055, abs(center_luma - local_average));
+float edge = clamp(max(gradient_edge, fine_edge * 0.72), 0.0, 1.0);
+float source_edge_distance = min(
+    min(uv.x, uv.y),
+    min(1.0 - uv.x, 1.0 - uv.y)
+);
+float projection_inner_distance = max(-signed_distance_uv, 0.0);
+float edge_distance = min(source_edge_distance, projection_inner_distance);
+float feather = smoothstep(0.0, 0.018, edge_distance);
+float boundary_ring = 1.0 - smoothstep(0.003, 0.014, edge_distance);
+float orientation = abs(gy) / max(abs(gx) + abs(gy), 0.0001);
+vec3 edge_rgb = mix(vec3(0.0, 0.92, 1.0), vec3(1.0, 0.12, 0.72), orientation);
+vec3 rgb = mix(edge_rgb, vec3(0.18, 0.52, 1.0), boundary_ring * 0.42);
+float edge_alpha = edge * feather * clamp(u_projection_area_opacity, 0.0, 1.0);
+float ring_alpha = boundary_ring * clamp(max(u_projection_area_opacity, 0.24), 0.0, 0.42);
+return premultiplied_alpha_color(rgb, max(edge_alpha, ring_alpha));
+}
+float uv_fiducial_line(float coord) {
+float nearest = floor(coord * 4.0 + 0.5) / 4.0;
+float in_range = step(0.20, nearest) * step(nearest, 0.80);
+float distance_to_line = abs(coord - nearest);
+return smoothstep(0.0040, 0.0015, distance_to_line) * in_range;
+}
+float uv_fiducial_marker_mask(vec2 screen_uv, vec2 center) {
+vec2 delta = abs(screen_uv - center);
+float disk = 1.0 - smoothstep(0.024, 0.030, length(screen_uv - center));
+float horizontal = (1.0 - step(0.006, delta.y)) * (1.0 - step(0.062, delta.x));
+float vertical = (1.0 - step(0.006, delta.x)) * (1.0 - step(0.062, delta.y));
+return clamp(max(disk, max(horizontal, vertical)), 0.0, 1.0);
+}
+void uv_fiducial_blend_marker(vec2 screen_uv, vec2 center, vec3 marker_rgb, inout vec3 rgb, inout float alpha) {
+float marker = uv_fiducial_marker_mask(screen_uv, center);
+rgb = mix(rgb, marker_rgb, marker);
+alpha = max(alpha, marker);
+}
+vec4 uv_fiducial_sample(vec2 uv, float signed_distance_uv, vec2 screen_uv) {
+vec3 source_rgb = adjusted_camera_rgb(uv);
+vec3 base_rgb = mix(source_rgb, vec3(0.025, 0.080, 0.115), 0.24);
+float feather = smoothstep(0.055, -0.005, signed_distance_uv);
+float alpha = clamp(u_projection_area_opacity * 0.26, 0.0, 0.30) * feather;
+float grid_alpha = max(
+    uv_fiducial_line(screen_uv.x) * 0.22,
+    uv_fiducial_line(screen_uv.y) * 0.22
+) * feather;
+vec3 rgb = mix(base_rgb, vec3(0.20), grid_alpha);
+alpha = max(alpha, grid_alpha);
+uv_fiducial_blend_marker(screen_uv, vec2(0.25, 0.25), vec3(0.0, 1.0, 1.0), rgb, alpha);
+uv_fiducial_blend_marker(screen_uv, vec2(0.25, 0.50), vec3(1.0, 0.0, 0.0), rgb, alpha);
+uv_fiducial_blend_marker(screen_uv, vec2(0.50, 0.25), vec3(1.0, 1.0, 0.0), rgb, alpha);
+uv_fiducial_blend_marker(screen_uv, vec2(0.50, 0.50), vec3(0.0, 1.0, 0.0), rgb, alpha);
+uv_fiducial_blend_marker(screen_uv, vec2(0.50, 0.75), vec3(1.0, 0.0, 1.0), rgb, alpha);
+uv_fiducial_blend_marker(screen_uv, vec2(0.75, 0.50), vec3(0.0, 0.0, 1.0), rgb, alpha);
+float boundary_ring = 1.0 - smoothstep(0.0, 0.018, abs(signed_distance_uv));
+rgb = mix(rgb, vec3(0.05, 0.78, 1.0), boundary_ring * 0.45);
+alpha = max(alpha, boundary_ring * 0.36);
+return premultiplied_alpha_color(rgb, alpha);
+}
+vec3 dense_uv_hue_rgb(float hue) {
+vec3 p = abs(fract(vec3(hue, hue + 0.666667, hue + 0.333333)) * 6.0 - 3.0);
+return clamp(p - 1.0, vec3(0.0), vec3(1.0));
+}
+float dense_uv_fiducial_marker_mask(vec2 screen_uv, vec2 center) {
+float radius = length(screen_uv - center);
+float disk = 1.0 - smoothstep(0.0155, 0.0195, radius);
+float core = 1.0 - smoothstep(0.004, 0.010, radius);
+return clamp(max(disk * 0.92, core), 0.0, 1.0);
+}
+vec4 dense_uv_fiducial_sample(vec2 uv, float signed_distance_uv, vec2 screen_uv) {
+vec3 source_rgb = adjusted_camera_rgb(uv);
+vec3 rgb = mix(source_rgb, vec3(0.020, 0.060, 0.080), 0.30);
+float feather = smoothstep(0.055, -0.005, signed_distance_uv);
+float alpha = clamp(u_projection_area_opacity * 0.18, 0.0, 0.22) * feather;
+for (int y = 0; y < 5; ++y) {
+    for (int x = 0; x < 5; ++x) {
+        vec2 center = vec2(0.20 + float(x) * 0.15, 0.20 + float(y) * 0.15);
+        float marker = dense_uv_fiducial_marker_mask(screen_uv, center) * feather;
+        float hue = fract(0.09 + float(x) * 0.17 + float(y) * 0.31);
+        vec3 marker_rgb = dense_uv_hue_rgb(hue);
+        rgb = mix(rgb, marker_rgb, marker);
+        alpha = max(alpha, marker);
+    }
+}
+float boundary_ring = 1.0 - smoothstep(0.0, 0.014, abs(signed_distance_uv));
+rgb = mix(rgb, vec3(0.05, 0.78, 1.0), boundary_ring * 0.26);
+alpha = max(alpha, boundary_ring * 0.22);
+return premultiplied_alpha_color(rgb, alpha);
+}
 void main() {
 vec2 renderer_surface_uv = v_uv;
 vec2 screen_uv = vec2(renderer_surface_uv.x, 1.0 - renderer_surface_uv.y);
@@ -354,6 +630,11 @@ if (u_content_mapping_mode == 1) {
         : camera_uv_h.z;
     camera_uv = camera_uv_h.xy / safe_camera_uv_z;
 }
+camera_uv = calibrated_camera_uv(camera_uv);
+if (selected_mesh_warp_enabled()) {
+    camera_uv -= selected_mesh_displacement_uv(screen_uv);
+    camera_uv -= selected_mesh_residual_displacement_uv(screen_uv);
+}
 bool source_uv_numeric = camera_uv.x == camera_uv.x && camera_uv.y == camera_uv.y;
 if (peripheral_stretch_active && stretch_effect_sample_region && !source_uv_numeric) {
     // NaN/undefined transition/exterior samples still belong to the stretch
@@ -380,6 +661,38 @@ if (peripheral_stretch_active && stretch_effect_sample_region && !source_uv_vali
 }
 if (!source_uv_valid) {
     out_color = source_invalid_color();
+    return;
+}
+if (u_processing_layer == 3) {
+    out_color = boundary_tint_sample(camera_uv, signed_distance_uv);
+    return;
+}
+if (u_processing_layer == 6) {
+    out_color = seam_blend_sample(camera_uv, signed_distance_uv);
+    return;
+}
+if (u_processing_layer == 7) {
+    out_color = alignment_edges_sample(camera_uv, signed_distance_uv);
+    return;
+}
+if (u_processing_layer == 8) {
+    out_color = seam_blend_sample(camera_uv, signed_distance_uv);
+    return;
+}
+if (u_processing_layer == 9) {
+    out_color = uv_fiducial_sample(camera_uv, signed_distance_uv, screen_uv);
+    return;
+}
+if (u_processing_layer == 10) {
+    out_color = dense_uv_fiducial_sample(camera_uv, signed_distance_uv, screen_uv);
+    return;
+}
+if (u_processing_layer == 4) {
+    out_color = spatial_warp_sample(camera_uv, signed_distance_uv);
+    return;
+}
+if (u_processing_layer == 5) {
+    out_color = alignment_edges_sample(camera_uv, signed_distance_uv);
     return;
 }
 vec4 sample_color = u_processing_layer == 1

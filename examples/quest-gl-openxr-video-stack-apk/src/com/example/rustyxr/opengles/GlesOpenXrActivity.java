@@ -17,6 +17,7 @@ public final class GlesOpenXrActivity extends android.app.NativeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        applyDefaultPassthroughLensIntentExtras();
         super.onCreate(savedInstanceState);
         mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
         requestMediaProjectionIfEnabled();
@@ -24,9 +25,67 @@ public final class GlesOpenXrActivity extends android.app.NativeActivity {
 
     @Override
     protected void onNewIntent(Intent intent) {
+        applyDefaultPassthroughLensIntentExtras(intent);
         super.onNewIntent(intent);
         setIntent(intent);
         requestMediaProjectionIfEnabled();
+    }
+
+    private void applyDefaultPassthroughLensIntentExtras() {
+        Intent intent = getIntent();
+        if (intent == null) {
+            intent = new Intent();
+            setIntent(intent);
+        }
+        applyDefaultPassthroughLensIntentExtras(intent);
+    }
+
+    private void applyDefaultPassthroughLensIntentExtras(Intent intent) {
+        if (intent == null || intent.hasExtra("rustyxr.example") || intent.hasExtra("rustyxr.videoSource")) {
+            return;
+        }
+        putDefaultStringExtra(intent, "rustyxr.videoSource", "direct-camera2-oes");
+        putDefaultStringExtra(intent, "rustyxr.directCamera2OesLeftCameraId", "50");
+        putDefaultStringExtra(intent, "rustyxr.directCamera2OesRightCameraId", "51");
+        putDefaultStringExtra(intent, "rustyxr.directCamera2OesWidth", "1280");
+        putDefaultStringExtra(intent, "rustyxr.directCamera2OesHeight", "1280");
+        putDefaultStringExtra(intent, "rustyxr.directCamera2OesFrameRateHz", "50");
+        putDefaultStringExtra(intent, "rustyxr.directCamera2OesProjectionGeometryProfile", "camera-projection");
+        putDefaultStringExtra(intent, "rustyxr.directCamera2OesSourceSamplingMode", "screen-to-camera-homography");
+        putDefaultStringExtra(intent, "rustyxr.cameraProjectionMode", "display-screen-homography");
+        putDefaultStringExtra(intent, "rustyxr.processingLayer", "seam-blend");
+        putDefaultStringExtra(intent, "rustyxr.projectionDepthMeters", "0.42");
+        putDefaultStringExtra(intent, "rustyxr.cameraPreviewFovYDegrees", "68.0");
+        putDefaultStringExtra(intent, "rustyxr.cameraPreviewOffsetYMeters", "0.0");
+        putDefaultStringExtra(intent, "rustyxr.cameraRawOverlayOverscan", "1.0");
+        putDefaultStringExtra(intent, "rustyxr.projectionAreaOffsetXUv", "0.0");
+        putDefaultStringExtra(intent, "rustyxr.projectionAreaOffsetYUv", "-0.07");
+        putDefaultStringExtra(intent, "rustyxr.cameraUvOffsetX", "0.0");
+        putDefaultStringExtra(intent, "rustyxr.cameraUvOffsetY", "0.0");
+        putDefaultStringExtra(intent, "rustyxr.cameraUvScaleX", "1.0");
+        putDefaultStringExtra(intent, "rustyxr.cameraUvScaleY", "1.0");
+        putDefaultStringExtra(intent, "rustyxr.cameraUvRadialK1", "0.0");
+        putDefaultStringExtra(intent, "rustyxr.cameraUvRadialK2", "0.0");
+        putDefaultStringExtra(intent, "rustyxr.projectionAreaOpacity", "0.26");
+        putDefaultStringExtra(intent, "rustyxr.projectionBorderOpacity", "0.0");
+        putDefaultStringExtra(intent, "rustyxr.projectionBorderPolicy", "passthrough-underlay");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchMode", "edge-stretch");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchCoreScale", "1.0");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchEdgeInsetUv", "0.008");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchMaxInsetUv", "0.070");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchCurve", "1.35");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchInnerBlendUv", "0.060");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchBlendCurve", "1.35");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchBlendMode", "target-inner-band");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchCornerMode", "target-footprint");
+        putDefaultStringExtra(intent, "rustyxr.peripheralStretchDebug", "off");
+        putDefaultStringExtra(intent, "rustyxr.mediaProjection", "false");
+    }
+
+    private static void putDefaultStringExtra(Intent intent, String key, String value) {
+        if (!intent.hasExtra(key)) {
+            intent.putExtra(key, value);
+        }
     }
 
     private void requestMediaProjectionIfEnabled() {

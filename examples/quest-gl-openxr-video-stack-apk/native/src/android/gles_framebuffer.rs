@@ -1,24 +1,26 @@
-use std::os::raw::c_int;
+use std::{fs, io::Write, os::raw::c_int};
 
 use rusty_xr_quest_diagnostics::GlFramebufferCompleteness;
 
 use super::{
     glBindFramebuffer, glCheckFramebufferStatus, glClear, glClearColor, glDeleteFramebuffers,
-    glDisable, glEnable, glFramebufferTexture2D, glGenFramebuffers, glScissor, glViewport,
+    glDisable, glEnable, glFramebufferTexture2D, glGenFramebuffers, glReadPixels, glScissor,
+    glViewport,
     oes_copy_renderer::OesCopyRenderer,
     openxr_gles_config::{
-        OesColorControls, OesPeripheralStretchConfig, OesProcessingLayer, OesProjectionAlphaMode,
-        OesProjectionBorderPolicy,
+        OesCameraUvCalibration, OesColorControls, OesPeripheralStretchConfig, OesProcessingLayer,
+        OesProjectionAlphaMode, OesProjectionBorderPolicy,
     },
     projection_geometry::{identity_homography, OesEyeProjection},
     GL_COLOR_ATTACHMENT0, GL_COLOR_BUFFER_BIT, GL_FRAMEBUFFER, GL_FRAMEBUFFER_COMPLETE,
     GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT, GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT,
-    GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE, GL_FRAMEBUFFER_UNSUPPORTED, GL_SCISSOR_TEST,
-    GL_TEXTURE_2D,
+    GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE, GL_FRAMEBUFFER_UNSUPPORTED, GL_RGBA, GL_SCISSOR_TEST,
+    GL_TEXTURE_2D, GL_UNSIGNED_BYTE,
 };
 
 const DIAGNOSTIC_BLUR_SOURCE_WIDTH_PX: f32 = 1280.0;
 const DIAGNOSTIC_BLUR_SOURCE_HEIGHT_PX: f32 = 1280.0;
+const VISUAL_DUMP_DOWNSAMPLE: u32 = 4;
 
 pub(super) struct GlFramebuffer {
     id: u32,
@@ -125,6 +127,7 @@ impl GlFramebuffer {
         projection_alpha_mode: OesProjectionAlphaMode,
         projection_alpha_scale: f32,
         projection_alpha_bias: f32,
+        camera_uv_calibration: OesCameraUvCalibration,
         camera_color_controls: OesColorControls,
     ) -> Result<GlFramebufferCompleteness, String> {
         unsafe {
@@ -176,11 +179,79 @@ impl GlFramebuffer {
                 projection_alpha_mode,
                 projection_alpha_scale,
                 projection_alpha_bias,
+                camera_uv_calibration,
                 diagnostic_blur_source_texel_size(),
                 camera_color_controls,
             )?;
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             Ok(fbo_status)
+        }
+    }
+
+    pub(super) fn capture_texture_ppm(
+        &mut self,
+        texture: u32,
+        width: u32,
+        height: u32,
+        path: &str,
+    ) -> Result<(), String> {
+        unsafe {
+            glBindFramebuffer(GL_FRAMEBUFFER, self.id);
+            glFramebufferTexture2D(
+                GL_FRAMEBUFFER,
+                GL_COLOR_ATTACHMENT0,
+                GL_TEXTURE_2D,
+                texture,
+                0,
+            );
+            let raw_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            let fbo_status = framebuffer_status(raw_status);
+            if !fbo_status.is_complete() {
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                return Err(format!(
+                    "visual dump framebuffer incomplete: {fbo_status:?}"
+                ));
+            }
+
+            let byte_count = width
+                .checked_mul(height)
+                .and_then(|pixels| pixels.checked_mul(4))
+                .ok_or_else(|| format!("visual dump dimensions overflow: {width}x{height}"))?;
+            let mut rgba = vec![0_u8; byte_count as usize];
+            glReadPixels(
+                0,
+                0,
+                width as c_int,
+                height as c_int,
+                GL_RGBA,
+                GL_UNSIGNED_BYTE,
+                rgba.as_mut_ptr().cast(),
+            );
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            if let Some(parent) = std::path::Path::new(path).parent() {
+                fs::create_dir_all(parent)
+                    .map_err(|error| format!("create visual dump directory: {error}"))?;
+            }
+            let output_width = (width / VISUAL_DUMP_DOWNSAMPLE).max(1);
+            let output_height = (height / VISUAL_DUMP_DOWNSAMPLE).max(1);
+            let mut file =
+                fs::File::create(path).map_err(|error| format!("create visual dump: {error}"))?;
+            write!(file, "P6\n{} {}\n255\n", output_width, output_height)
+                .map_err(|error| format!("write visual dump header: {error}"))?;
+            for output_y in (0..output_height).rev() {
+                let y = (output_y * VISUAL_DUMP_DOWNSAMPLE).min(height - 1);
+                let row_start = (y * width * 4) as usize;
+                for output_x in 0..output_width {
+                    let x = (output_x * VISUAL_DUMP_DOWNSAMPLE).min(width - 1);
+                    let index = row_start + (x * 4) as usize;
+                    file.write_all(&rgba[index..index + 3])
+                        .map_err(|error| format!("write visual dump pixels: {error}"))?;
+                }
+            }
+            file.sync_all()
+                .map_err(|error| format!("sync visual dump: {error}"))?;
+            Ok(())
         }
     }
 }

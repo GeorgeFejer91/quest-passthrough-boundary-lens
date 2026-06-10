@@ -5,8 +5,9 @@ use super::{
     oes_copy_shader_sources::{OES_COPY_FRAGMENT_SHADER_SOURCE, OES_COPY_VERTEX_SHADER_SOURCE},
     oes_copy_uniforms::{OesCopyRenderUniforms, OesCopyUniformLocations},
     openxr_gles_config::{
-        OesColorControls, OesContentMappingMode, OesPeripheralStretchConfig, OesProcessingLayer,
-        OesProjectionAlphaMode, OesProjectionBorderPolicy,
+        OesCameraUvCalibration, OesColorControls, OesContentMappingMode,
+        OesPeripheralStretchConfig, OesProcessingLayer, OesProjectionAlphaMode,
+        OesProjectionBorderPolicy,
     },
     GL_FRAGMENT_SHADER, GL_NO_ERROR, GL_TEXTURE0, GL_TEXTURE_EXTERNAL_OES, GL_VERTEX_SHADER,
 };
@@ -88,6 +89,7 @@ impl OesCopyRenderer {
         projection_alpha_mode: OesProjectionAlphaMode,
         projection_alpha_scale: f32,
         projection_alpha_bias: f32,
+        camera_uv_calibration: OesCameraUvCalibration,
         source_texel_size: [f32; 2],
         color_controls: OesColorControls,
     ) -> Result<(), String> {
@@ -114,6 +116,7 @@ impl OesCopyRenderer {
                 projection_alpha_mode,
                 projection_alpha_scale,
                 projection_alpha_bias,
+                camera_uv_calibration,
                 source_texel_size,
                 color_controls,
             });

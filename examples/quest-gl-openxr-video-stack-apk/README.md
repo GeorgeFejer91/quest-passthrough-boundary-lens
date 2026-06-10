@@ -98,6 +98,9 @@ The catalog exposes these GL/OES camera-path profiles:
   the APK, routes preview output directly to per-eye `SurfaceTexture`/OES
   surfaces, requests 1280x1280 and 50 fps, and renders the projected GL
   camera-space path.
+- `gles-direct-camera2-oes-boundary-lens`: opens the same direct Camera2/OES
+  path, submits native passthrough as an underlay, and renders the app-visible
+  camera footprint as a semi-transparent blue boundary lens.
 
 The GL/OES APK reads the same public broker H.264 launch extras used by the
 composite-layer example where they apply:
@@ -145,6 +148,13 @@ passthrough issue code. A black outside region in a `solid-red` run is not valid
 footprint evidence; rerun after checking the launch extras and shader logs.
 Use `rustyxr.projectionAreaOffsetYUv=<value>` for controlled vertical
 projection-area centering sweeps after the hard-mask border is proven.
+Use `rustyxr.cameraUvOffsetX`, `rustyxr.cameraUvOffsetY`,
+`rustyxr.cameraUvScaleX`, `rustyxr.cameraUvScaleY`,
+`rustyxr.cameraUvRadialK1`, and `rustyxr.cameraUvRadialK2` to tune the
+Camera2/OES sampling grid after the projection footprint is placed. The
+passthrough-lens profiles currently use `cameraUvScaleX=1.02`,
+`cameraUvScaleY=1.02`, `cameraUvRadialK1=0.28`, and
+`cameraUvRadialK2=0.0` for the near comb/controller calibration plane.
 Use `rustyxr.projectionAreaOpacity=<0..1>` to fade valid projected OES camera
 pixels and `rustyxr.projectionBorderOpacity=<0..1>` to fade the solid-red
 outside-projection region independently. Opacity below `1.0` requests
@@ -160,6 +170,15 @@ contract markers so OES can be compared directly with HWB and Makepad.
 Set `rustyxr.processingLayer=blur` and `rustyxr.cameraBlurRadiusPx=<px>` to run
 the same valid projected camera samples through the public 9-tap diagnostic blur
 layer. Leave `rustyxr.processingLayer=raw` for projection-only checks.
+Set `rustyxr.processingLayer=boundary-tint` with
+`rustyxr.projectionBorderPolicy=passthrough-underlay` to inspect the accessible
+Camera2/OES footprint as a tinted lens over native passthrough. The shader keeps
+invalid or outside-projection pixels transparent and highlights the valid patch
+edge in blue.
+Set `rustyxr.processingLayer=spatial-warp` to apply the same footprint mask to
+a radial zoom-field warp. This diagnostic keeps native passthrough underlay
+visible outside the footprint and adds subtle contour rings so the warp field
+can be verified in screenshots.
 
 The direct Camera2/OES path reads these launch extras:
 

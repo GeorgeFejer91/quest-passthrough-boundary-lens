@@ -1715,7 +1715,13 @@ $cameraTextureLaneAnalysis = Invoke-ProfileTimedStep -Step "camera-texture-lane-
     Invoke-CameraTextureLaneContractAnalysis -Dir $dir
 }
 $manifest["cameraTextureLaneAnalysis"] = $cameraTextureLaneAnalysis
-$manifest["cameraTextureLaneSummary"] = $cameraTextureLaneAnalysis.summary
+if ($null -ne $cameraTextureLaneAnalysis -and
+    $null -ne $cameraTextureLaneAnalysis.PSObject.Properties["summary"]) {
+    $manifest["cameraTextureLaneSummary"] = $cameraTextureLaneAnalysis.summary
+}
+else {
+    $manifest["cameraTextureLaneSummary"] = $null
+}
 $profileTimingSummary = New-ProfileTimingSummary
 Write-Utf8TextFile -Path $script:profileTimingSummaryPath -Value ($profileTimingSummary | ConvertTo-Json -Depth 8)
 $manifest["timing"] = [ordered]@{

@@ -151,6 +151,7 @@ mod android {
     const GL_SCISSOR_TEST: u32 = 0x0C11;
     const GL_TEXTURE_2D: u32 = 0x0DE1;
     const GL_FLOAT: u32 = 0x1406;
+    const GL_UNSIGNED_BYTE: u32 = 0x1401;
     const GL_RGBA: u32 = 0x1908;
     const GL_RGBA8: u32 = 0x8058;
     const GL_RGB10_A2: u32 = 0x8059;
@@ -201,6 +202,15 @@ mod android {
         fn glCheckFramebufferStatus(target: u32) -> u32;
         fn glBindTexture(target: u32, texture: u32);
         fn glGetError() -> u32;
+        fn glReadPixels(
+            x: c_int,
+            y: c_int,
+            width: c_int,
+            height: c_int,
+            format: u32,
+            type_: u32,
+            pixels: *mut c_void,
+        );
         fn glFlush();
         fn glActiveTexture(texture: u32);
         fn glCreateShader(shader_type: u32) -> u32;

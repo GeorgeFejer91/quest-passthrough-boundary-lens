@@ -292,6 +292,14 @@ pub(super) enum OesProcessingLayer {
     Raw,
     Blur,
     PeripheralStretch,
+    BoundaryTint,
+    SeamBlend,
+    MeshWarpEdges,
+    MeshWarpSeam,
+    UvFiducials,
+    DenseUvFiducials,
+    SpatialWarp,
+    AlignmentEdges,
 }
 
 impl OesProcessingLayer {
@@ -304,6 +312,31 @@ impl OesProcessingLayer {
             | "border-stretch"
             | "projection-border-stretch"
             | "edge-stretch" => Some(Self::PeripheralStretch),
+            "boundary-tint" | "boundary-lens" | "lens-boundary" | "camera-boundary-tint" => {
+                Some(Self::BoundaryTint)
+            }
+            "seam-blend" | "edge-seam" | "boundary-seam" | "passthrough-seam"
+            | "transition-seam" => Some(Self::SeamBlend),
+            "mesh-warp-edges"
+            | "local-mesh-edges"
+            | "selected-mesh-edges"
+            | "selected-warp-edges" => Some(Self::MeshWarpEdges),
+            "mesh-warp-seam" | "local-mesh-seam" | "selected-mesh-seam" | "selected-warp-seam" => {
+                Some(Self::MeshWarpSeam)
+            }
+            "uv-fiducials" | "uv-grid" | "screen-uv-fiducials" | "calibration-fiducials" => {
+                Some(Self::UvFiducials)
+            }
+            "dense-uv-fiducials"
+            | "dense-uv-grid"
+            | "dense-screen-uv-fiducials"
+            | "dense-calibration-fiducials" => Some(Self::DenseUvFiducials),
+            "spatial-warp" | "warp-field" | "fisheye-warp" | "expansion-warp" => {
+                Some(Self::SpatialWarp)
+            }
+            "alignment-edges" | "edge-align" | "calibration-edges" | "camera-edge-overlay" => {
+                Some(Self::AlignmentEdges)
+            }
             _ => None,
         }
     }
@@ -313,6 +346,14 @@ impl OesProcessingLayer {
             Self::Raw => "raw",
             Self::Blur => "blur",
             Self::PeripheralStretch => "peripheral-stretch",
+            Self::BoundaryTint => "boundary-tint",
+            Self::SeamBlend => "seam-blend",
+            Self::MeshWarpEdges => "mesh-warp-edges",
+            Self::MeshWarpSeam => "mesh-warp-seam",
+            Self::UvFiducials => "uv-fiducials",
+            Self::DenseUvFiducials => "dense-uv-fiducials",
+            Self::SpatialWarp => "spatial-warp",
+            Self::AlignmentEdges => "alignment-edges",
         }
     }
 
@@ -321,11 +362,19 @@ impl OesProcessingLayer {
             Self::Raw => 0,
             Self::Blur => 1,
             Self::PeripheralStretch => 2,
+            Self::BoundaryTint => 3,
+            Self::SpatialWarp => 4,
+            Self::AlignmentEdges => 5,
+            Self::SeamBlend => 6,
+            Self::MeshWarpEdges => 7,
+            Self::MeshWarpSeam => 8,
+            Self::UvFiducials => 9,
+            Self::DenseUvFiducials => 10,
         }
     }
 
     pub(super) const fn consumes_projection_exterior(self) -> bool {
-        matches!(self, Self::PeripheralStretch)
+        matches!(self, Self::PeripheralStretch | Self::SeamBlend)
     }
 }
 

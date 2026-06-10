@@ -119,6 +119,8 @@ $d8 = Join-Path $buildToolsRoot 'd8.bat'
 $zipalign = Join-Path $buildToolsRoot 'zipalign.exe'
 $apksigner = Join-Path $buildToolsRoot 'apksigner.bat'
 $openXrLoader = Resolve-OpenXrLoader -RequestedPath $OpenXrLoaderPath
+$openXrLoaderDir = Split-Path -Parent $openXrLoader
+$metaSpatialSdkOne = Join-Path $openXrLoaderDir 'libMetaSpatialSDK_1.so'
 $libCpp = Resolve-LibCpp -NdkRoot $ndkRoot
 
 foreach ($tool in @($androidJar, $linker, $javac, $jar, $keytool, $aapt2, $d8, $zipalign, $apksigner, $openXrLoader, $libCpp)) {
@@ -156,6 +158,9 @@ if (-not (Test-Path $nativeLibrary)) {
 $abiRoot = Join-Path $packageRoot 'lib\arm64-v8a'
 Copy-Item -LiteralPath $nativeLibrary -Destination (Join-Path $abiRoot 'librusty_xr_quest_gl_openxr_video_stack_native.so')
 Copy-Item -LiteralPath $openXrLoader -Destination (Join-Path $abiRoot 'libopenxr_loader.so')
+if (Test-Path $metaSpatialSdkOne) {
+    Copy-Item -LiteralPath $metaSpatialSdkOne -Destination (Join-Path $abiRoot 'libMetaSpatialSDK_1.so')
+}
 Copy-Item -LiteralPath $libCpp -Destination (Join-Path $abiRoot 'libc++_shared.so')
 
 $unsignedApk = Join-Path $buildRoot 'rusty-xr-quest-gl-openxr-video-stack-unsigned.apk'
