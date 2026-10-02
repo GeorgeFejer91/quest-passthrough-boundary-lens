@@ -152,3 +152,6 @@ python tools/boundary-scan/rusty_xr_boundary_scan.py --repo-root .
 ```
 
 If only docs changed, still run the public-boundary scan before pushing.
+## Quest ADB Access
+
+For local headset work, use the configured ADB wrapper and authorize the headset from its UI. Do not commit device serials, key locations, or workstation-specific paths.

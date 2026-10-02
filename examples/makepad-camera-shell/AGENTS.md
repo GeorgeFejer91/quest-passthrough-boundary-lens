@@ -117,3 +117,6 @@ readiness, nonzero left/right texture-update cadence, zero decode errors, and
 the derived `surface_to_camera`, `screen_to_surface`, and `screen_to_camera`
 rows. `max_packets=0` means a live/unbounded broker stream and must not be
 clamped to a one-packet stream.
+## Quest ADB Access
+
+For local headset work, use the configured ADB wrapper and authorize the headset from its UI. Do not commit device serials, key locations, or workstation-specific paths.
